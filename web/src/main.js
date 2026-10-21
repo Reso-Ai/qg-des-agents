@@ -25,7 +25,7 @@ let tod = params.get('tod') ?? 'soir';
 let speed = Number(params.get('vitesse')) || 1;
 let W = 0, H = 0, DPR = 1;
 let mode = 'carte'; // carte | plongee | ville
-let fade = 0; // le fondu de la carte vers la ville
+let fade = 0, fadeFrom = null; // le fondu de la carte vers la ville (et l'échelle de la carte au moment du passage)
 let runId = null, liveRun = null, events = [], buffer = [];
 let config = null;
 let lanc = null;
@@ -56,6 +56,7 @@ function setMode(m) {
 function frame(dt) {
   if (pre) {
     // l'ouverture du film : la France, puis on plonge sur la ville
+    if (pre.wait) { carte.draw(g, W, H, DPR, performance.now()); return; } // ?attente : la France, immobile, jusqu'au clic sur Lecture
     pre.t += dt;
     const u = Math.min(1, pre.t / pre.dur);
     const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
@@ -86,10 +87,15 @@ function frame(dt) {
     }
     // la carte s'efface sur la ville
     if (fade > 0) {
-      g.globalAlpha = fade;
+      // la carte suit la caméra de la ville pendant le fondu : les deux images restent l'une sur l'autre
+      if (fadeFrom) {
+        const [lat, lon] = city.toLatLon(cam.x, cam.y);
+        Object.assign(carte.cam, { x: (lon + 180) / 360, y: (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2, zoom: fadeFrom.zoom + Math.log2(cam.z / fadeFrom.z) });
+      }
+      g.globalAlpha = fade * fade * (3 - 2 * fade);
       carte.draw(g, W, H, DPR);
       g.globalAlpha = 1;
-      fade = Math.max(0, fade - Math.max(dt, 1 / 30) * 1.8);
+      fade = Math.max(0, fade - Math.max(dt, 1 / 60) * 1.1);
     }
   }
 }
@@ -126,6 +132,7 @@ function enterCity() {
   Object.assign(cam, { x, y, z: carte.pxPerMeter(W, DPR) });
   director.smoothUntil = world.time + 4;
   fade = 1;
+  fadeFrom = { zoom: carte.cam.zoom, z: cam.z };
   setMode('ville');
 }
 
@@ -152,10 +159,23 @@ async function cinema(id) {
   const [qlat, qlon] = city.toLatLon(qx, qy);
   const to = { ...carte.cam };
   const [tx, ty] = [(qlon + 180) / 360, (1 - Math.log(Math.tan(qlat * Math.PI / 180) + 1 / Math.cos(qlat * Math.PI / 180)) / Math.PI) / 2];
-  pre = { t: 0, dur: Number(params.get('ouverture') ?? 4.2), from: { x: 0.5068, y: 0.3560, zoom: 6.1 }, to: { x: tx, y: ty, zoom: 13.4 } };
+  // le vol finit assez bas pour que la ville couvre tout l'écran au moment du passage (sinon, un carré sur fond noir)
+  const side = 2 * Math.min(4300, Math.max(1600, (run.rayon ?? sd?.rayon ?? 2200) + 300)) * 0.8;
+  const zEnd = Math.log2((W / DPR) * 40075016.686 * Math.cos(qlat * Math.PI / 180) / (256 * side));
+  pre = { t: 0, wait: params.has('attente'), dur: Number(params.get('ouverture') ?? 4.6), from: { x: 0.5068, y: 0.3560, zoom: 6.1 }, to: { x: tx, y: ty, zoom: Math.max(13.4, zEnd) } };
   Object.assign(carte.cam, pre.from);
   void to;
+  if (pre.wait) $('cn-play').hidden = false;
 }
+
+/** ?attente : le film part quand on appuie sur Lecture (ou Entrée, Espace), pour se filmer en train de le lancer. */
+function startCinema() {
+  if (!pre?.wait) return;
+  pre.wait = false;
+  $('cn-play').hidden = true;
+  document.body.classList.add('playing');
+}
+$('cn-play').addEventListener('click', startCinema);
 
 /** Rejoue une mission : tous ses gestes partent dans les files des agents, qui les jouent à leur rythme. */
 function play() {
@@ -334,6 +354,7 @@ canvas.addEventListener('wheel', (e) => {
 window.addEventListener('keydown', (e) => {
   if (e.target.closest?.('input, textarea')) return;
   if (e.key === 'Escape') fiche?.close();
+  if (e.key === 'Enter' || e.key === ' ') { if (pre?.wait) e.preventDefault(); startCinema(); }
   if (e.key === 'n' || e.key === 'N') tod = TODS[(TODS.indexOf(tod) + 1) % TODS.length];
   if ((e.key === 'r' || e.key === 'R') && mode === 'ville') play();
   if ((e.key === 'c' || e.key === 'C') && director) director.manualUntil = 0;

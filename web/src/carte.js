@@ -305,7 +305,7 @@ export function createCarte({ onPick, getRayon = () => 2000 } = {}) {
   /** Pixels d'écran par mètre au centre de la vue (pour raccorder la carte et la ville). */
   function pxPerMeter(W, dpr) { const [lat] = unmerc(cam.x, cam.y); return scale(W, dpr) / (40075016.686 * Math.cos(lat * D2R)); }
 
-  return { cam, draw, setHover, pickAt, choose, select, pan, zoomAt, flyTo, pxPerMeter, get selected() { return selected; }, get hover() { return hover; }, get flying() { return Boolean(flight); }, centre: () => unmerc(cam.x, cam.y) };
+  return { cam, draw, setHover, pickAt, choose, select, pan, zoomAt, flyTo, pxPerMeter, get selected() { return selected; }, get hover() { return hover; }, get flying() { return Boolean(flight); }, get loading() { let n = 0; for (const t of tiles.values()) if (t.state === 'loading') n++; return n; }, centre: () => unmerc(cam.x, cam.y) };
 }
 
 /* ------------------------------------------------------------------ remplir, tracer (coordonnées de tuile) */

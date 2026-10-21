@@ -203,6 +203,11 @@ button { font: inherit; color: inherit; }
 body.cinema .quest, body.cinema .res, body.cinema .party, body.cinema .inbox, body.cinema .btn-carte { display: none !important; }
 #cine { position: absolute; inset: 0; pointer-events: none; display: none; font-family: var(--pixel); }
 body.cinema #cine { display: block; }
+.cn-play { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 5; width: 112px; height: 112px; display: grid; place-items: center; border: 3px solid #07060b; background: var(--orange); box-shadow: 0 0 0 3px #fbfaff, 0 8px 0 #07060b, 0 0 60px rgba(255, 138, 61, 0.55); cursor: pointer; }
+.cn-play[hidden] { display: none; }
+.cn-play svg { width: 54px; height: 54px; fill: #07060b; margin-left: 6px; }
+.cn-play:hover { filter: brightness(1.08); }
+body.cinema.playing { cursor: none; }
 .cn-bars i { position: absolute; left: 0; right: 0; height: 5.5vh; background: #000; }
 .cn-bars i:first-child { top: 0; } .cn-bars i:last-child { bottom: 0; }
 .cn-vignette { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%); }

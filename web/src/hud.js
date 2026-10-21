@@ -102,7 +102,7 @@ export function createHud(root, world) {
       <p class="sc-tag">Client potentiel</p>`;
     card.hidden = false;
     card.classList.remove('in'); void card.offsetWidth; card.classList.add('in');
-    cardFor = { q, until: world.time + 2.6 };
+    cardFor = { q, from: world.time, until: world.time + 2.6 };
   }
 
   /** À chaque image : les compteurs, l'équipe, les bulles (placées au-dessus des robots), la carte du score. */
@@ -189,15 +189,26 @@ export function createHud(root, world) {
         if (ox && a.y > b.y - b.h - 6) { a.y = b.y - b.h - 6; a.el.style.transform = `translate(${Math.round(a.x)}px, ${Math.round(a.y)}px)`; }
       }
     }
+    // aucune bulle coupée par le bord de l'écran (ni sous les bandes noires du cinéma)
+    const vw = W / dpr, vh = H / dpr, top = document.body.classList.contains('cinema') ? vh * 0.07 : 8;
+    for (const b of boxes) {
+      const x = Math.min(vw - b.w / 2 - 12, Math.max(b.w / 2 + 12, b.x)), y = Math.max(top + b.h, b.y);
+      if (x !== b.x || y !== b.y) b.el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    }
     // la carte du score suit son commerce
     const card = $('h-card');
     if (cardFor) {
-      if (world.time > cardFor.until) { card.hidden = true; cardFor = null; }
+      // (le monde rejoué repart de zéro : une carte d'avant le retour en arrière s'efface aussi)
+      if (world.time > cardFor.until || world.time < cardFor.from) { card.hidden = true; cardFor = null; }
       else {
         const [sx, sy] = toScr(cardFor.q.x, cardFor.q.y);
         const right = sx + 330 < W / dpr - 20;
-        card.style.left = `${Math.round(right ? sx + (22 * S) / dpr : sx - 300 - (22 * S) / dpr)}px`;
-        card.style.top = `${Math.round(sy - (40 * S) / dpr)}px`;
+        // la carte reste dans l'écran, sous les compteurs et au-dessus de la radio
+        const vw = W / dpr, vh = H / dpr;
+        const x = right ? sx + (22 * S) / dpr : sx - 300 - (22 * S) / dpr;
+        const y = Math.min(vh * 0.84 - card.offsetHeight, Math.max(vh * 0.2, sy - (40 * S) / dpr));
+        card.style.left = `${Math.round(Math.min(vw - card.offsetWidth - 16, Math.max(16, x)))}px`;
+        card.style.top = `${Math.round(y)}px`;
       }
     }
   }
