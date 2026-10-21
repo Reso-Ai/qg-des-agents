@@ -1,0 +1,7 @@
+node_modules/
+web/dist/
+data/
+.env
+config.json
+_local/
+.DS_Store

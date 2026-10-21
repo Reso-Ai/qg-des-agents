@@ -1,0 +1,24 @@
+{
+  "offre": {
+    "signature": "Ton prénom et ton nom",
+    "site": "https://ton-site.fr",
+    "ce_que_je_vends": "Décris ici, en une phrase, ce que tu proposes aux commerces (tu peux aussi l'écrire dans le panneau de lancement).",
+    "pour_qui": "Le type de commerce visé, et le problème qu'il a."
+  },
+  "consignes": "Court (90 mots au plus), vouvoiement, une seule observation concrète, une question facile à la fin.",
+  "recherche": {
+    "metier": "salle de sport",
+    "ville": "Lyon",
+    "centre": { "lat": 45.764, "lon": 4.8357 },
+    "rayon_m": 2000,
+    "nombre": 20,
+    "source": "osm",
+    "pays": "FR",
+    "veut": { "emails": true, "telephones": true }
+  },
+  "equipe": {
+    "lecteurs_en_parallele": 3,
+    "redacteurs_en_parallele": 2,
+    "score_minimum": 60
+  }
+}
