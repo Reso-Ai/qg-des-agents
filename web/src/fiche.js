@@ -87,7 +87,8 @@ export function createFiche(root, { getRunId, onClose }) {
     const lu = q.read;
     const items = lu ? bilan(q) : [];
     const manque = items.filter(([ok]) => !ok), deja = items.filter(([ok]) => ok);
-    const phones = [...new Set([...(q.telephones ?? []), d.phone].filter(Boolean))];
+    const tel = (t) => { const x = String(t).replace(/[^\d+]/g, '').replace(/^\+33/, '0').replace(/^0033/, '0'); return /^0\d{9}$/.test(x) ? x.replace(/(\d{2})(?=\d)/g, '$1 ') : t; };
+    const phones = [...new Set([...(q.telephones ?? []), d.phone].filter(Boolean).map(tel))];
     const email = q.email ?? q.to ?? null;
     root.innerHTML = `
       <div class="f-head">
@@ -119,12 +120,13 @@ export function createFiche(root, { getRunId, onClose }) {
     googleLink(q).then((u) => { if (g) g.href = u; });
   }
 
-  function open(q) { cur = q; root.hidden = false; render(); root.classList.remove('in'); void root.offsetWidth; root.classList.add('in'); }
+  function open(q) { cur = q; root.hidden = false; document.body.classList.add('has-fiche'); render(); root.classList.remove('in'); void root.offsetWidth; root.classList.add('in'); }
 
   /** Un commerce de la carte que l'équipe n'a pas (encore) vu : son nom, Google Maps, et un lecteur à envoyer. */
   function openPoi(poi, { ville, onSend }) {
     cur = { id: null, poi };
     root.hidden = false;
+    document.body.classList.add('has-fiche');
     const type = TYPES[poi.sub] ?? TYPES[poi.cls] ?? poi.sub ?? poi.cls ?? 'commerce';
     const gm = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${poi.name} ${ville ?? ''}`.trim())}`;
     root.innerHTML = `
@@ -142,7 +144,7 @@ export function createFiche(root, { getRunId, onClose }) {
     });
     root.classList.remove('in'); void root.offsetWidth; root.classList.add('in');
   }
-  function close() { cur = null; root.hidden = true; onClose?.(); }
+  function close() { cur = null; root.hidden = true; document.body.classList.remove('has-fiche'); onClose?.(); }
   function refresh(q) { if (cur && q && cur.id === q.id && !root.contains(document.activeElement)) render(); }
   return { open, openPoi, close, refresh, get current() { return cur; } };
 }

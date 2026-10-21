@@ -378,6 +378,7 @@ window.__qg = {
   get director() { return director; },
   get mode() { return mode; },
   get cine() { return cine; },
+  get fiche() { return fiche; },
   get pre() { return pre; },
   setCam(x, y, z) { Object.assign(cam, { x, y, z }); if (director) director.manualUntil = 1e12; },
   setTod(t) { tod = t; },
