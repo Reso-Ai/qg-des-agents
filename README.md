@@ -118,7 +118,10 @@ autre pays. Le fichier [CLAUDE.md](CLAUDE.md) lui explique comment le projet est
 ## Merci
 
 - **Le projet d'origine** : cette version est adaptée du [QG des agents](https://github.com/devlikemasta/qg-des-agents) de
-  devlikemasta (licence MIT). Elle ajoute les thérapeutes, une note pensée pour les praticiens et le rédacteur sous Windows.
+  devlikemasta (licence MIT).
+- **Les améliorations de cette version** : Samuel Vallee ([Neurosound](https://neurosound.bio)), pour les ajouts présents et
+  à venir. Déjà : les thérapeutes, une note pensée pour les praticiens, le rédacteur sous Windows et le mail qui s'ouvre
+  pré-rempli dans ta messagerie.
 - **Les données** : © les contributeurs d'[OpenStreetMap](https://www.openstreetmap.org/copyright) (ODbL), tuiles vectorielles
   [OpenFreeMap](https://openfreemap.org), API [Overpass](https://overpass-api.de). Les villes de la recherche :
   [GeoNames](https://www.geonames.org) (CC BY 4.0). Les contours des pays : [Natural Earth](https://www.naturalearthdata.com)
