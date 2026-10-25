@@ -29,6 +29,13 @@ const METIERS = [
   [/auto[- ]?[ée]cole/i, ['nwr["amenity"="driving_school"]']],
   [/dentist/i, ['nwr["amenity"="dentist"]', 'nwr["healthcare"="dentist"]']],
   [/kin[ée]|physio/i, ['nwr["healthcare"="physiotherapist"]']],
+  // Après les kinés : « kinésithérapeute » contient « thérapeute ».
+  [/th[ée]rap|psycho|neuroprat|sophro|naturo|hypno|r[ée]flexo|ost[ée]o|bien[- ]?[êe]tre/i, [
+    'nwr["healthcare"~"^(psychotherapist|alternative|counselling|psychologist)$"]',
+    'nwr["healthcare"="physiotherapist"]["healthcare:speciality"~"osteopath",i]',
+    'nwr["office"="therapist"]',
+    'nwr["shop"="massage"]',
+  ]],
   [/immobili/i, ['nwr["office"="estate_agent"]', 'nwr["shop"="estate_agent"]']],
   [/avocat/i, ['nwr["office"="lawyer"]']],
   [/h[ôo]tel/i, ['nwr["tourism"="hotel"]']],

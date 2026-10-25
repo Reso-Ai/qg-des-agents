@@ -6,8 +6,12 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { ROOT } from '../env.mjs';
 
 // Claude Code : la commande « claude » (installée par l'installeur officiel dans ~/.local/bin, sinon cherchée dans le PATH).
-const LOCAL = join(homedir(), '.local', 'bin', 'claude');
-const CLAUDE = process.env.CLAUDE_BIN ?? (existsSync(LOCAL) ? LOCAL : 'claude');
+// Sous Windows, « claude » dans le PATH est un script .cmd que spawn ne sait pas lancer : on cherche le vrai claude.exe.
+const CANDIDATS = process.platform === 'win32'
+  ? [join(homedir(), '.local', 'bin', 'claude.exe'),
+     join(process.env.APPDATA ?? '', 'npm', 'node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe')]
+  : [join(homedir(), '.local', 'bin', 'claude')];
+const CLAUDE = process.env.CLAUDE_BIN ?? CANDIDATS.find((f) => existsSync(f)) ?? 'claude';
 const CWD = join(ROOT, 'data', 'redacteur');
 mkdirSync(CWD, { recursive: true });
 

@@ -9,7 +9,7 @@ export const METIERS = [
   ['Salles de sport', 'salle de sport'], ['Yoga & pilates', 'yoga'], ['Restaurants', 'restaurant'], ['Cafés', 'café'], ['Bars', 'bar'],
   ['Coiffeurs', 'coiffeur'], ['Barbiers', 'barbier'], ['Instituts de beauté', 'institut de beauté'], ['Boulangeries', 'boulangerie'],
   ['Fleuristes', 'fleuriste'], ['Opticiens', 'opticien'], ['Garages', 'garage'], ['Auto-écoles', 'auto-école'], ['Dentistes', 'dentiste'],
-  ['Kinés', 'kiné'], ['Agences immobilières', 'agence immobilière'], ['Hôtels', 'hôtel'], ['Vétérinaires', 'vétérinaire'],
+  ['Kinés', 'kiné'], ['Agences immobilières', 'agence immobilière'], ['Hôtels', 'hôtel'], ['Vétérinaires', 'vétérinaire'], ['Thérapeutes', 'thérapeute'],
 ];
 const PAYS = { FR: 'France', BE: 'Belgique', CH: 'Suisse' };
 

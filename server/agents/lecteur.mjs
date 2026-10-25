@@ -63,6 +63,11 @@ function links(html, base) {
   return out;
 }
 
+// Un lien mailto: ou tel: avec un « % » mal formé (Doctolib…) ne doit pas faire échouer toute la page.
+function decodeLien(s) {
+  try { return decodeURIComponent(s); } catch { return s; }
+}
+
 // Décode les entités HTML (&#064; &#x40; …) et les adresses protégées par Cloudflare (data-cfemail).
 function decodeEntities(html) {
   return html
@@ -87,12 +92,12 @@ function findEmails(rawHtml, siteHost) {
   const found = new Set(cloudflareEmails(rawHtml));
   const html = decodeEntities(rawHtml);
   const deob = html.replace(/\s*(\[at\]|\(at\)|\s+arobase\s+)\s*/gi, '@').replace(/\s*(\[dot\]|\(dot\))\s*/gi, '.');
-  for (const m of deob.matchAll(/mailto:([^"'?\s>]+)/gi)) found.add(decodeURIComponent(m[1]).toLowerCase());
+  for (const m of deob.matchAll(/mailto:([^"'?\s>]+)/gi)) found.add(decodeLien(m[1]).toLowerCase());
   for (const m of visibleText(deob).matchAll(EMAIL_RE)) found.add(m[0].toLowerCase());
   const host = siteHost.replace(/^www\./, '');
   const root = host.split('.').slice(-2).join('.');
   return [...found]
-    .filter((e) => !EMAIL_JUNK.test(e))
+    .filter((e) => e.includes('@') && !EMAIL_JUNK.test(e))
     // On garde l'adresse du commerce : son propre domaine, ou une messagerie grand public (le gérant).
     // Les adresses d'agences web, de plateformes ou de partenaires affichées sur le site sont écartées.
     .filter((e) => e.endsWith('@' + host) || e.split('@')[1].endsWith(root) || FREEMAIL.test(e.split('@')[1]))
@@ -105,7 +110,7 @@ const PHONE_RE = /(?:\+33|0033|\+32|0032|\+41|0041|\b0)\s?[1-9](?:[\s.\-]?\d{2})
 function findPhones(rawHtml) {
   const html = decodeEntities(rawHtml);
   const raw = new Set();
-  for (const m of html.matchAll(/href=["']tel:([^"']+)["']/gi)) raw.add(decodeURIComponent(m[1]));
+  for (const m of html.matchAll(/href=["']tel:([^"']+)["']/gi)) raw.add(decodeLien(m[1]));
   for (const m of visibleText(html).matchAll(PHONE_RE)) raw.add(m[0]);
   const out = new Map();
   for (const r of raw) {
@@ -139,6 +144,10 @@ export async function lire(place, { onStep } = {}) {
   // Un « site » qui est une page Facebook ou Instagram n'est pas un site.
   if (/facebook\.com|instagram\.com|linktr\.ee|tripadvisor\./i.test(start.host)) {
     return { ok: false, raison: 'pas de vrai site (réseau social)', signals: { site: false, social_only: start.host }, emails: [], excerpt: '' };
+  }
+  // Une fiche sur une plateforme de rendez-vous : les adresses qu'on y lit sont celles de la plateforme, pas du cabinet.
+  if (/doctolib\.|felixsante\.|medoucine\.|resalib\.|keldoc\.|maiia\.|pagesjaunes\.|planity\./i.test(start.host)) {
+    return { ok: false, raison: `pas de site à lui (fiche ${start.host.replace(/^www\./, '')})`, signals: { site: false, plateforme: start.host }, emails: [], excerpt: '' };
   }
   onStep?.(`J'ouvre ${start.host}`);
   let home;
@@ -181,6 +190,7 @@ export async function lire(place, { onStep } = {}) {
     annee: years.length ? Math.max(...years) : null,
     titre: (home.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? '').replace(/\s+/g, ' ').trim().slice(0, 120),
     pages_lues: pages.map((p) => new URL(p.url).pathname),
+    themes: [...new Set([...visibleText(all).matchAll(THEMES)].map((m) => m[0].toLowerCase()))].slice(0, 4),
   };
   const emails = findEmails(all, host);
   // L'adresse renseignée sur la carte (OpenStreetMap) compte aussi, si c'est bien celle du commerce.
@@ -198,8 +208,28 @@ export async function lire(place, { onStep } = {}) {
   return { ok: true, signals, emails, email_source, telephones, excerpt: text.slice(0, 1500) };
 }
 
+// Les praticiens (thérapeutes, sophrologues, kinés…) : l'offre est un outil pour leur pratique, pas un module de réservation.
+const PRATICIEN = /th[ée]rap|psycho|neuroprat|sophro|naturo|hypno|r[ée]flexo|ost[ée]o|kin[ée]|bien[- ]?[êe]tre/i;
+// Les sujets proches d'une pratique par le son, relevés sur le site.
+const THEMES = /(?<!\p{L})(?:sonore|vibrations?|musicoth[ée]rapie|bols? tib[ée]tains?|diapasons?|relaxation|stress|sommeil|anxi[ée]t[ée]|hypnose|sophrologie|m[ée]ditation|[ée]nerg[ée]tique|neurofeedback|coh[ée]rence cardiaque)(?!\p{L})/giu;
+
+function noterPraticien(lecture) {
+  const s = lecture.signals ?? {};
+  const raisons = [];
+  let score = 45;
+  const add = (pts, texte) => { score += pts; raisons.push({ pts, texte }); };
+  if (!s.site) add(-30, 'pas de site lisible');
+  if (s.site) add(15, 'a son propre site : un cabinet installé');
+  if (s.themes?.length) add(20, `parle déjà de ${s.themes.join(', ')}`);
+  if (s.reservation_en_ligne) add(5, `prend ses rendez-vous en ligne (${s.reservation_en_ligne}) : à l'aise avec les outils numériques`);
+  if (s.annee && s.annee >= 2024) add(5, `site tenu à jour (${s.annee})`);
+  if (!lecture.emails?.length) add(-20, 'aucune adresse de contact');
+  return { score: Math.max(0, Math.min(100, score)), raisons };
+}
+
 /** Le score : est-ce un bon client pour l'offre ? Chaque point est expliqué (pas de boîte noire). */
 export function noter(place, lecture) {
+  if (PRATICIEN.test(place.type ?? '')) return noterPraticien(lecture);
   const s = lecture.signals ?? {};
   const raisons = [];
   let score = 30;
