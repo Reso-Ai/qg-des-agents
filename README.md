@@ -21,7 +21,7 @@ Gratuit, open source, et tout tourne sur ton ordinateur.
 2. Ouvre Claude Code et colle cette phrase :
 
    ```
-   Installe et lance le QG des agents : https://github.com/devlikemasta/qg-des-agents
+   Installe et lance le QG des agents : https://github.com/Reso-Ai/qg-des-agents
    ```
 
 3. Claude Code télécharge le QG, l'installe, te dit s'il manque quelque chose, et l'ouvre dans ton navigateur
@@ -31,7 +31,7 @@ Les fois suivantes, dis simplement à Claude Code « Relance le QG des agents »
 
 > **Pour Claude Code** (si on t'a donné ce lien) :
 > 1. Vérifie que Node.js 22.13 ou plus récent est installé (`node -v`). Sinon, propose à la personne de l'installer depuis https://nodejs.org (version LTS).
-> 2. `git clone https://github.com/devlikemasta/qg-des-agents.git` dans le dossier de son choix (par défaut : son dossier personnel), puis `cd qg-des-agents` et `npm install`.
+> 2. `git clone https://github.com/Reso-Ai/qg-des-agents.git` dans le dossier de son choix (par défaut : son dossier personnel), puis `cd qg-des-agents` et `npm install`.
 > 3. **Aucune clé n'est obligatoire.** Les commerces viennent d'OpenStreetMap (gratuit) et les mails sont écrits par Claude Code, avec l'abonnement de la personne. Explique-lui ça en une phrase.
 > 4. Une seule clé est facultative : `GOOGLE_MAPS_API_KEY` (fiche Google de chaque commerce, recherche par Google Places). Demande-lui si elle la veut. Si oui : copie `.env.example` en `.env`, guide-la dans la Google Cloud Console (créer une clé, activer « Places API (New) », restreindre la clé à cette API) et fais-la coller dans `.env`. **Ne demande jamais qu'on te colle la clé dans la conversation**, et ne l'écris nulle part ailleurs que dans `.env`.
 > 5. Demande-lui son offre en trois lignes (ce qu'elle vend, pour qui, sa signature et son site). Elle peut aussi la taper dans le panneau de lancement : c'est enregistré dans `config.json` (créé au premier lancement depuis `config.example.json`).
@@ -41,7 +41,7 @@ Les fois suivantes, dis simplement à Claude Code « Relance le QG des agents »
 ### À la main, si tu préfères
 
 ```bash
-git clone https://github.com/devlikemasta/qg-des-agents.git
+git clone https://github.com/Reso-Ai/qg-des-agents.git
 cd qg-des-agents
 npm install
 npm start
@@ -117,6 +117,8 @@ autre pays. Le fichier [CLAUDE.md](CLAUDE.md) lui explique comment le projet est
 
 ## Merci
 
+- **Le projet d'origine** : cette version est adaptée du [QG des agents](https://github.com/devlikemasta/qg-des-agents) de
+  devlikemasta (licence MIT). Elle ajoute les thérapeutes, une note pensée pour les praticiens et le rédacteur sous Windows.
 - **Les données** : © les contributeurs d'[OpenStreetMap](https://www.openstreetmap.org/copyright) (ODbL), tuiles vectorielles
   [OpenFreeMap](https://openfreemap.org), API [Overpass](https://overpass-api.de). Les villes de la recherche :
   [GeoNames](https://www.geonames.org) (CC BY 4.0). Les contours des pays : [Natural Earth](https://www.naturalearthdata.com)
@@ -137,5 +139,5 @@ a type of business and what you sell. The scout finds businesses on OpenStreetMa
 is missing, writers draft a first email with your offer (Claude Code in `claude -p` mode, with your own subscription). **No
 email is ever sent automatically**: every draft waits for your approval. Runs locally; no API key required (an optional
 Google Maps key adds Google place links). Requirements: Node.js 22.13+ and Claude Code. Install: paste
-`Install and run the Agents' HQ: https://github.com/devlikemasta/qg-des-agents` into Claude Code, or `git clone`,
+`Install and run the Agents' HQ: https://github.com/Reso-Ai/qg-des-agents` into Claude Code, or `git clone`,
 `npm install`, `npm start`. The interface is in French for now.
