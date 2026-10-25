@@ -55,6 +55,18 @@ export function createFiche(root, { getRunId, onClose }) {
     if (!b || !cur) return;
     const act = b.dataset.act;
     if (act === 'close') return close();
+    // Le mail, tel que corrigé dans la fiche, s'ouvre dans la messagerie de la personne : c'est elle qui clique sur Envoyer.
+    if (act === 'messagerie' || act === 'gmail') {
+      const to = cur.to ?? cur.email ?? '';
+      const objet = root.querySelector('.f-obj')?.value ?? '';
+      const mail = (root.querySelector('.f-body')?.value ?? '').replace(/\r?\n/g, '\r\n');
+      const url = act === 'gmail'
+        ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(objet)}&body=${encodeURIComponent(mail)}`
+        : `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(mail)}`;
+      if (act === 'gmail') window.open(url, '_blank', 'noopener');
+      else location.href = url;
+      return;
+    }
     if (act === 'valide' || act === 'refuse') {
       const run = getRunId();
       const objet = root.querySelector('.f-obj')?.value, mail = root.querySelector('.f-body')?.value;
@@ -113,6 +125,8 @@ export function createFiche(root, { getRunId, onClose }) {
         <label>Message</label><textarea class="f-body" rows="9">${esc(q.mail)}</textarea>
         <p class="f-to">À : ${esc(q.to ?? email ?? '')}</p>
         ${q.state === 'pret' ? '<div class="f-dec"><button type="button" class="f-btn" data-act="valide">Valider</button><button type="button" class="f-btn ghost" data-act="refuse">Refuser</button></div><p class="f-note">Rien ne part sans toi.</p>' : ''}
+        ${q.state !== 'refuse' && (q.to ?? email) ? `<div class="f-links"><button type="button" class="f-btn" data-act="messagerie">Ouvrir dans ma messagerie</button><button type="button" class="f-btn ghost" data-act="gmail">Ouvrir dans Gmail</button></div>
+        <p class="f-note">Le mail s'ouvre rempli : tu le relis et c'est toi qui cliques sur Envoyer.</p>` : ''}
       </section>` : ''}
       ${q.journal?.length ? `<section><h3>Ce que le lecteur a fait</h3><ol class="f-log">${q.journal.map((t) => `<li>${esc(t)}</li>`).join('')}</ol></section>` : ''}`;
     root.querySelector('.f-ic').append(icon(q.state));
