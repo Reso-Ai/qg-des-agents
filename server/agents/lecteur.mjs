@@ -88,19 +88,38 @@ function cloudflareEmails(html) {
   return out;
 }
 
+// Ce qui, juste avant une adresse, montre qu'elle n'est pas celle du commerce : l'hébergeur, l'agence qui a fait le site…
+const EMAIL_TIERS = /h[ée]berg|r[ée]alis|con[cç]u|cr[ée]ation du site|cr[ée]dits|d[ée]velopp|webmaster|agence|propuls|m[ée]diat|cnil|dpo\b|protection des donn[ée]es/i;
+const EMAIL_PLATEFORMES = /@([\w-]+\.)*(wix|wixpress|doctolib|ovh|o2switch|ionos|1and1|hostinger|gandi|google|facebook|squarespace|jimdo|webflow|shopify|pagesjaunes|solocal|planity|resalib|medoucine|calendly)\./i;
+
 function findEmails(rawHtml, siteHost) {
-  const found = new Set(cloudflareEmails(rawHtml));
-  const html = decodeEntities(rawHtml);
-  const deob = html.replace(/\s*(\[at\]|\(at\)|\s+arobase\s+)\s*/gi, '@').replace(/\s*(\[dot\]|\(dot\))\s*/gi, '.');
-  for (const m of deob.matchAll(/mailto:([^"'?\s>]+)/gi)) found.add(decodeLien(m[1]).toLowerCase());
-  for (const m of visibleText(deob).matchAll(EMAIL_RE)) found.add(m[0].toLowerCase());
   const host = siteHost.replace(/^www\./, '');
   const root = host.split('.').slice(-2).join('.');
+  const html = decodeEntities(rawHtml);
+  const deob = html
+    .replace(/\s*(\[at\]|\(at\)|\{at\}|\[arobase\]|\(arobase\)|\s+arobase\s+|\s+@\s+)\s*/gi, '@')
+    .replace(/\s*(\[dot\]|\(dot\)|\{dot\}|\[point\]|\(point\))\s*/gi, '.');
+  const text = visibleText(deob).toLowerCase();
+  // adresse → vue dans un lien mailto:, une donnée structurée ou une protection Cloudflare (plus sûr que le texte seul)
+  const found = new Map();
+  const add = (e, sur) => { e = e.toLowerCase().trim(); if (/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(e) && !EMAIL_JUNK.test(e)) found.set(e, found.get(e) || sur); };
+  for (const e of cloudflareEmails(rawHtml)) add(e, true);
+  for (const m of deob.matchAll(/mailto:([^"'?\s>]+)/gi)) add(decodeLien(m[1]), true);
+  // Les données structurées (schema.org) : « "email": "contact@…" », souvent dans un <script> que le texte visible ignore.
+  for (const m of deob.matchAll(/"email"\s*:\s*"(?:mailto:)?([^"\s]+@[^"\s]+)"/gi)) add(m[1], true);
+  for (const m of text.matchAll(EMAIL_RE)) add(m[0], false);
+  const avant = (e) => { const i = text.indexOf(e); return i < 0 ? '' : text.slice(Math.max(0, i - 160), i); };
   return [...found]
-    .filter((e) => e.includes('@') && !EMAIL_JUNK.test(e))
-    // On garde l'adresse du commerce : son propre domaine, ou une messagerie grand public (le gérant).
-    // Les adresses d'agences web, de plateformes ou de partenaires affichées sur le site sont écartées.
-    .filter((e) => e.endsWith('@' + host) || e.split('@')[1].endsWith(root) || FREEMAIL.test(e.split('@')[1]))
+    .filter(([e, sur]) => {
+      const d = e.split('@')[1];
+      // Son propre domaine, ou une messagerie grand public (le gérant) : c'est l'adresse du commerce.
+      if (d === host || d.endsWith(root) || FREEMAIL.test(d)) return true;
+      // Un autre domaine (le groupe, le nom du praticien…) : seulement s'il est présenté comme un contact,
+      // et que rien juste avant ne dit que c'est l'hébergeur, l'agence web ou une plateforme.
+      if (EMAIL_PLATEFORMES.test(e) || EMAIL_TIERS.test(avant(e))) return false;
+      return sur || /contact|e-?mail|courriel|[ée]cri(vez|re)|joindre/.test(avant(e).slice(-80));
+    })
+    .map(([e]) => e)
     // Les adresses du site lui-même d'abord, puis contact@ / reservation@ / bonjour@.
     .sort((a, b) => rankEmail(b, host) - rankEmail(a, host));
 }
@@ -130,6 +149,7 @@ function findPhones(rawHtml) {
 function rankEmail(e, host) {
   let s = 0;
   if (e.endsWith('@' + host)) s += 10;
+  else if (FREEMAIL.test(e.split('@')[1])) s += 3;
   if (/^(contact|bonjour|hello|info|infos|reservation|reservations|resa|accueil)@/.test(e)) s += 5;
   return s;
 }
@@ -141,33 +161,46 @@ function detect(html, list) {
 
 /** Lit un site. `onStep(texte)` raconte ce que le lecteur fait, page par page. */
 export async function lire(place, { onStep } = {}) {
-  if (!place.website) return { ok: false, raison: 'pas de site', signals: { site: false }, emails: [], excerpt: '' };
-  const start = new URL(place.website);
+  // L'adresse renseignée sur la carte (OpenStreetMap) est rattachée à ce commerce : elle compte même sans site.
+  const osm = place.email_osm?.toLowerCase().trim().replace(/^mailto:/, '').split(/[;,\s]/)[0];
+  const osmOk = osm && /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(osm) && !EMAIL_JUNK.test(osm) ? osm : null;
+  const sansSite = (raison, signals) => ({ ok: false, raison, signals, emails: osmOk ? [osmOk] : [], email_source: osmOk ? 'OpenStreetMap' : null, excerpt: '' });
+  if (!place.website) return sansSite('pas de site', { site: false });
+  let start;
+  try { start = new URL(place.website); } catch { return sansSite('adresse de site invalide', { site: false }); }
   // Un « site » qui est une page Facebook ou Instagram n'est pas un site.
   if (/facebook\.com|instagram\.com|linktr\.ee|tripadvisor\./i.test(start.host)) {
-    return { ok: false, raison: 'pas de vrai site (réseau social)', signals: { site: false, social_only: start.host }, emails: [], excerpt: '' };
+    return sansSite('pas de vrai site (réseau social)', { site: false, social_only: start.host });
   }
   // Une fiche sur une plateforme de rendez-vous : les adresses qu'on y lit sont celles de la plateforme, pas du cabinet.
   if (/doctolib\.|felixsante\.|medoucine\.|resalib\.|keldoc\.|maiia\.|pagesjaunes\.|planity\./i.test(start.host)) {
-    return { ok: false, raison: `pas de site à lui (fiche ${start.host.replace(/^www\./, '')})`, signals: { site: false, plateforme: start.host }, emails: [], excerpt: '' };
+    return sansSite(`pas de site à lui (fiche ${start.host.replace(/^www\./, '')})`, { site: false, plateforme: start.host });
   }
   onStep?.(`J'ouvre ${start.host}`);
-  let home;
-  try { home = await getHtml(start.href); } catch (e) {
-    return { ok: false, raison: `site injoignable (${e.message})`, signals: { site: false, injoignable: true }, emails: [], excerpt: '' };
+  // Un site qui ne répond pas à son adresse exacte répond souvent avec ou sans « www », ou en http.
+  const essais = [start.href];
+  const alt = new URL(start.href);
+  alt.host = start.host.startsWith('www.') ? start.host.slice(4) : `www.${start.host}`;
+  essais.push(alt.href);
+  if (start.protocol === 'https:') essais.push(start.href.replace(/^https:/, 'http:'));
+  let home, erreur;
+  for (const url of essais) {
+    try { home = await getHtml(url); break; } catch (e) { erreur = e; }
   }
+  if (!home) return sansSite(`site injoignable (${erreur.message})`, { site: false, injoignable: true });
   const pages = [{ url: home.finalUrl, html: home.html }];
   const host = new URL(home.finalUrl).host;
+  const PRIORITE = /contact|coordonn|mentions|legal|impressum/i;
   const candidates = links(home.html, home.finalUrl)
     .filter((l) => new URL(l.url).host === host && !/\.(pdf|jpe?g|png)$/i.test(l.url))
-    .filter((l) => /contact|mentions|legal|reserv|booking|infos?-pratiques|a-propos|about/i.test(l.url + ' ' + l.text))
+    .filter((l) => /contact|coordonn|mentions|legal|impressum|reserv|booking|rendez|rdv|infos?-pratiques|a-propos|about|qui-suis|cabinet|praticien|equipe|tarif/i.test(l.url + ' ' + l.text))
     // Les pages contact et mentions légales d'abord : c'est là que l'adresse est affichée.
-    .sort((a, b) => /contact|mentions|legal/i.test(b.url + b.text) - /contact|mentions|legal/i.test(a.url + a.text));
-  // Aucun lien trouvé (menu en JavaScript) : on essaie les adresses habituelles.
-  if (!candidates.length) for (const path of ['/contact', '/mentions-legales']) candidates.push({ url: new URL(path, home.finalUrl).href, text: '' });
+    .sort((a, b) => PRIORITE.test(b.url + b.text) - PRIORITE.test(a.url + a.text));
+  // Les adresses habituelles, au cas où le menu est en JavaScript (des liens que le lecteur ne voit pas).
+  for (const path of ['/contact', '/mentions-legales']) if (!candidates.some((l) => PRIORITE.test(l.url))) candidates.push({ url: new URL(path, home.finalUrl).href, text: '' });
   const seen = new Set([home.finalUrl]);
   for (const l of candidates) {
-    if (pages.length >= 4) break;
+    if (pages.length >= 6) break;
     if (seen.has(l.url)) continue;
     seen.add(l.url);
     onStep?.(`Je lis ${new URL(l.url).pathname}`);
@@ -195,14 +228,13 @@ export async function lire(place, { onStep } = {}) {
     themes: [...new Set([...visibleText(all).matchAll(THEMES)].map((m) => m[0].toLowerCase()))].slice(0, 4),
   };
   const emails = findEmails(all, host);
-  // L'adresse renseignée sur la carte (OpenStreetMap) compte aussi, si c'est bien celle du commerce.
-  const osm = place.email_osm?.toLowerCase().trim();
-  if (osm && !emails.includes(osm) && findEmails(`mailto:${osm}`, host).length) emails.push(osm);
+  // L'adresse renseignée sur la carte (OpenStreetMap) compte aussi : après celles du site, qui sont plus à jour.
+  if (osmOk && !emails.includes(osmOk)) emails.push(osmOk);
   // La page où l'adresse retenue est affichée (pour la montrer dans la fiche).
   let email_source = null;
   if (emails[0]) {
     const page = pages.find((p) => findEmails(p.html, host).includes(emails[0]));
-    email_source = page ? new URL(page.url).pathname : emails[0] === osm ? 'OpenStreetMap' : null;
+    email_source = page ? new URL(page.url).pathname : emails[0] === osmOk ? 'OpenStreetMap' : null;
   }
   const telephones = findPhones(all);
   onStep?.(emails.length ? `Adresse trouvée : ${emails[0]}` : 'Aucune adresse de contact affichée');
