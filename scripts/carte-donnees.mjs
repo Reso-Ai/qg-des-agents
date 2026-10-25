@@ -1,7 +1,7 @@
 // Prépare les données de la carte de mission (à lancer une fois) :
-// - web/public/carte/pays.json : les contours de la France, de la Belgique, de la Suisse et de leurs voisins
+// - web/public/carte/pays.json : les contours de la France, de la Belgique, de la Suisse et de leurs voisins, et de La Réunion
 //   (Natural Earth 1:10 m, domaine public, via le paquet world-atlas) ;
-// - web/public/carte/villes.json : les villes de plus de 5 000 habitants des trois pays (GeoNames, CC BY 4.0).
+// - web/public/carte/villes.json : les villes de plus de 5 000 habitants de ces pays (GeoNames, CC BY 4.0).
 // GeoNames : télécharger cities5000.zip et admin1CodesASCII.txt dans data/geonames (https://download.geonames.org/export/dump/).
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,12 +12,14 @@ const OUT = join(ROOT, 'web', 'public', 'carte');
 mkdirSync(OUT, { recursive: true });
 
 /* ---------- les pays */
-export const PAYS = { FR: 'France', BE: 'Belgique', CH: 'Suisse' };
+export const PAYS = { FR: 'France', BE: 'Belgique', CH: 'Suisse', RE: 'La Réunion' };
 const NUM = {
   250: 'FR', '056': 'BE', 756: 'CH',
   442: 'LU', 276: 'DE', 528: 'NL', 380: 'IT', 724: 'ES', '020': 'AD', 492: 'MC', 438: 'LI', '040': 'AT', 826: 'GB', 620: 'PT', 203: 'CZ', 208: 'DK', 705: 'SI', 191: 'HR',
 };
 const BOX = { w: -8.5, e: 14, s: 39.5, n: 54.5 };
+// L'outre-mer : Natural Earth le range dans la France ; chaque territoire a son cadre et son code (celui de GeoNames).
+const OUTRE_MER = { RE: { w: 55, e: 56, s: -21.6, n: -20.7 } };
 const topo = JSON.parse(readFileSync(join(ROOT, 'node_modules', 'world-atlas', 'countries-10m.json'), 'utf8'));
 const geo = feature(topo, topo.objects.countries);
 
@@ -30,7 +32,7 @@ const simplify = (ring) => {
   }
   return out.length >= 4 ? out : null;
 };
-const inBox = (ring) => ring.some(([x, y]) => x > BOX.w && x < BOX.e && y > BOX.s && y < BOX.n);
+const inBox = (ring, box = BOX) => ring.some(([x, y]) => x > box.w && x < box.e && y > box.s && y < box.n);
 const area = (ring) => Math.abs(ring.reduce((a, [x, y], i) => { const [x2, y2] = ring[(i + 1) % ring.length]; return a + x * y2 - x2 * y; }, 0) / 2);
 
 const pays = [];
@@ -41,9 +43,12 @@ for (const f of geo.features) {
   const rings = [];
   for (const poly of polys) {
     const outer = poly[0];
-    if (!inBox(outer) || area(outer) < 0.004) continue; // hors cadre (outre-mer) ou îlot
-    const r = simplify(outer);
-    if (r) rings.push(r);
+    if (area(outer) < 0.004) continue; // îlot
+    const om = cc === 'FR' && Object.keys(OUTRE_MER).find((k) => inBox(outer, OUTRE_MER[k]));
+    const r = (om || inBox(outer)) && simplify(outer);
+    if (!r) continue; // hors cadre
+    if (om) pays.push({ cc: om, nom: PAYS[om], rings: [r] });
+    else rings.push(r);
   }
   if (rings.length) pays.push({ cc, nom: PAYS[cc] ?? null, rings });
 }
@@ -66,13 +71,13 @@ const FR_REGIONS = {
   Nidwalden: 'Nidwald', Neuchâtel: 'canton de Neuchâtel', Lucerne: 'canton de Lucerne', Jura: 'canton du Jura', Grisons: 'Grisons',
   Glarus: 'canton de Glaris', Geneva: 'canton de Genève', Fribourg: 'canton de Fribourg', Bern: 'canton de Berne', 'Basel-City': 'Bâle-Ville',
   'Basel-Landschaft': 'Bâle-Campagne', 'Appenzell Ausserrhoden': 'Appenzell Rhodes-Extérieures', 'Appenzell Innerrhoden': 'Appenzell Rhodes-Intérieures',
-  Aargau: 'Argovie', Corsica: 'Corse', Brittany: 'Bretagne', 'New Aquitaine': 'Nouvelle-Aquitaine', Normandy: 'Normandie',
+  Aargau: 'Argovie', Reunion: 'La Réunion', Corsica: 'Corse', Brittany: 'Bretagne', 'New Aquitaine': 'Nouvelle-Aquitaine', Normandy: 'Normandie',
 };
 const regions = [];
 const regionIndex = new Map();
 for (const line of readFileSync(join(ROOT, 'data', 'geonames', 'admin1CodesASCII.txt'), 'utf8').split('\n')) {
   const [code, nom] = line.split('\t');
-  if (!code || !/^(FR|BE|CH)\./.test(code)) continue;
+  if (!code || !/^(FR|BE|CH|RE)\./.test(code)) continue;
   regionIndex.set(code, regions.length);
   regions.push(FR_REGIONS[nom] ?? nom);
 }

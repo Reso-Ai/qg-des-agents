@@ -31,7 +31,7 @@ export function createCarte({ onPick, getRayon = () => 2000 } = {}) {
   const t0 = performance.now();
 
   fetch('/carte/pays.json').then((r) => r.json()).then((d) => {
-    pays = d.pays.filter((p) => ['FR', 'BE', 'CH'].includes(p.cc)).map((p) => ({ cc: p.cc, rings: p.rings.map((r) => r.map(([lon, lat]) => merc(lat, lon))) }));
+    pays = d.pays.filter((p) => ['FR', 'BE', 'CH', 'RE'].includes(p.cc)).map((p) => ({ cc: p.cc, rings: p.rings.map((r) => r.map(([lon, lat]) => merc(lat, lon))) }));
   }).catch(() => {});
 
   function inPays(x, y) {

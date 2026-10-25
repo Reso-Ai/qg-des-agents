@@ -11,7 +11,7 @@ export const METIERS = [
   ['Fleuristes', 'fleuriste'], ['Opticiens', 'opticien'], ['Garages', 'garage'], ['Auto-écoles', 'auto-école'], ['Dentistes', 'dentiste'],
   ['Kinés', 'kiné'], ['Agences immobilières', 'agence immobilière'], ['Hôtels', 'hôtel'], ['Vétérinaires', 'vétérinaire'], ['Thérapeutes', 'thérapeute'],
 ];
-const PAYS = { FR: 'France', BE: 'Belgique', CH: 'Suisse' };
+const PAYS = { FR: 'France', BE: 'Belgique', CH: 'Suisse', RE: 'La Réunion' };
 
 export function createLancement(root, { config, onLaunch, onSearch, onReplay }) {
   const cfg = config ?? {};

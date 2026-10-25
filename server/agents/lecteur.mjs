@@ -105,8 +105,8 @@ function findEmails(rawHtml, siteHost) {
     .sort((a, b) => rankEmail(b, host) - rankEmail(a, host));
 }
 
-// Les numéros affichés (liens tel: et texte), en France, en Belgique et en Suisse.
-const PHONE_RE = /(?:\+33|0033|\+32|0032|\+41|0041|\b0)\s?[1-9](?:[\s.\-]?\d{2}){3,4}\b/g;
+// Les numéros affichés (liens tel: et texte), en France, à La Réunion, en Belgique et en Suisse.
+const PHONE_RE = /(?:\+33|0033|\+262|00262|\+32|0032|\+41|0041|\b0)\s?[1-9](?:[\s.\-]?\d{2}){3,4}\b/g;
 function findPhones(rawHtml) {
   const html = decodeEntities(rawHtml);
   const raw = new Set();
@@ -118,7 +118,9 @@ function findPhones(rawHtml) {
     if (d.startsWith('0033')) d = '+33' + d.slice(4);
     if (d.startsWith('0032')) d = '+32' + d.slice(4);
     if (d.startsWith('0041')) d = '+41' + d.slice(4);
+    if (d.startsWith('00262')) d = '+262' + d.slice(5);
     if (d.startsWith('+33')) d = '0' + d.slice(3);
+    if (d.startsWith('+262')) d = '0' + d.slice(4); // La Réunion : +262 262… s'écrit 0262…, +262 692… s'écrit 0692…
     if (/^0[1-9]\d{8}$/.test(d)) out.set(d, d.replace(/(\d{2})(?=\d)/g, '$1 ').trim());
     else if (/^\+(32|41)\d{8,9}$/.test(d)) out.set(d, d);
   }
