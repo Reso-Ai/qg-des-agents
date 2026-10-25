@@ -121,6 +121,10 @@ autre pays. Le fichier [CLAUDE.md](CLAUDE.md) lui explique comment le projet est
   devlikemasta (licence MIT).
 - **Les améliorations de cette version** : Samuel Vallee ([Neurosound](https://neurosound.bio)): les thérapeutes, une note pensée pour les praticiens, le rédacteur sous Windows et le mail qui s'ouvre
   pré-rempli dans ta messagerie.
+- **Les données** : © les contributeurs d'[OpenStreetMap](https://www.openstreetmap.org/copyright) (ODbL), tuiles vectorielles
+  [OpenFreeMap](https://openfreemap.org), API [Overpass](https://overpass-api.de). Les villes de la recherche, La Réunion
+  comprise : [GeoNames](https://www.geonames.org) (CC BY 4.0). Les contours des pays et de La Réunion :
+  [Natural Earth](https://www.naturalearthdata.com) (domaine public), via `world-atlas`.
 - **Les polices** : Pixelify Sans et Plus Jakarta Sans (licence OFL).
 - **Le grand frère** : le [Bureau des agents](https://github.com/devlikemasta/bureau-des-agents), où les mêmes robots
   travaillent au bureau. Le code et les dessins du QG sont écrits à neuf, en pixel art, sans image externe.
